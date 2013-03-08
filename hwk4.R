@@ -78,7 +78,7 @@ checkTime.local<-sapply(c(8000,12000,14000,16000,18000),
                     system.time(rcount(B,csvfile))
                   }
 )
-plot(c(5000,8000,12000,14000,16000,18000,10000),c(268.263,checkTime.Local[,3],258.497))
+plot(c(5000,8000,12000,14000,16000,18000,10000),c(268.263,checkTime.local[,3],258.497))
 
 #8000
 system.time(rcount(8000,"2008.csv"))
@@ -95,7 +95,7 @@ system.time(rcount(20000,"2008.csv"))
 #user  system elapsed 
 #264.036   0.712 264.747 
 
-plot(c(5000,seq(8000,20000,by=2000)),c(268.263,262.640,258.497,256.567,checkTime.local[3,],264.747))
+plot(c(5000,seq(8000,20000,by=2000),c(22000,24000,26000),c(28000,30000,32000)),c(268.263,262.640,258.497,256.567,checkTime.local[3,],264.747,checkTime.local2[3,],checkTime.local3[3,]),xlab="B lines",ylab=("elapsed.time (secs)"))
 
 #ii. Rprof the best "B"
 Sys.setlocale(locale="C")
