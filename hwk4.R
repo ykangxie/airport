@@ -88,6 +88,7 @@ system.time(RSHcount<-rcount(400L,con,"2008"))
 # (II) Mean and Std.Dev for 2008.csv
 ##############################################
 con<-pipe("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' 2008.csv","r")
+#rstats 
 rstats<-function(B,con,year){
   B=as.integer(B)
   #set up counters
@@ -107,20 +108,21 @@ rstats<-function(B,con,year){
     ArrDelay<-ArrDelay[dropNA]
     Origin<-Origin[dropNA]
     #1.1 Rcounts
-    update<-as.numeric(table(Origin)[names(Rcounts)])
+    update<-tapply(ArrDelay,Origin,length)[names(Rcounts)]
     update[is.na(update)]<-0
-    Rcounts<-Rcounts+update
+    Rcounts<-Rcounts+as.numeric(update)
     #1.2 Rsum
     update<-tapply(ArrDelay,Origin,sum)[names(Rsum)]
     update[is.na(update)]<-0
-    Rsum<-Rsum+update
+    Rsum<-Rsum+as.numeric(update)
     #1.3 Rvar
     update<-tapply(ArrDelay,Origin,function(x){var(x)*length(x)})[names(Rsumvar)]
     update[is.na(update)]<-0
-    Rsumvar<-Rsumvar+update   
+    Rsumvar<-Rsumvar+as.numeric(update) 
   }
   cbind(Rcounts,Rsum,Rsumvar)
 }
+
 
 system.time(RS.ALL<-rstats(400L,con))
 #user  system elapsed 
@@ -172,6 +174,6 @@ system.time(RS.1987<-rstats(400L,con))
 #10.749   0.025  19.469 
 #tapply
 #user  system elapsed 
-#8.725   0.040  15.688 
+#7.901   0.024  14.950 
 RS[,2]/RS[,1]
 sqrt(RS[,3]/RS[,1])
