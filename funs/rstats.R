@@ -18,7 +18,8 @@ rstats<-function(B,con,year){
     ArrDelay<-ArrDelay[dropNA]
     Origin<-Origin[dropNA]
     #1.1 Rcounts
-    update<-tapply(ArrDelay,Origin,length)[names(Rcounts)]
+    update<-as.numeric(table(temp)[names(Rcounts)])
+    #update<-tapply(ArrDelay,Origin,length)[names(Rcounts)] #table() is faster than tapply(length)
     update[is.na(update)]<-0
     Rcounts<-Rcounts+as.numeric(update)
     #1.2 Rsum

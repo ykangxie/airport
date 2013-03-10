@@ -30,14 +30,14 @@ dept=c("LAX","OAK","SFO","SMF")
 year="2008"
 
 #(I) Shell Scripting
-#1.1 /grep & wc -l/
+#1.1 /grep & wc -l/ [multiple passes]
 system.time(SHcounts.wc<-system("for airport in LAX OAK SFO SMF; do cut -f 17 -d , 2008.csv | grep $airport | wc -l; done",intern=TRUE))
 system.time(SHcounts.wc<-structure(as.numeric(SHcounts.wc),names=c("LAX","OAK","SFO","SMF")))
 
 #user  system elapsed 
 #67.317   0.867  55.346 
 
-#1.2 /egrep & (sort + uniq -c)/
+#1.2 /egrep & (sort + uniq -c)/ [one pass]
 system.time(SHcounts.uniq<-system("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' 2008.csv | cut -f 17 -d , | sort | uniq -c",intern=TRUE))
 
 #user  system elapsed 
@@ -85,7 +85,7 @@ system.time(RSHcount<-rcount(400L,con,"2008"))
 #19.476   0.061  57.478 
 
 ##############################################
-# (II) Mean and Std.Dev for 2008.csv
+# Test: Mean and Std.Dev for 2008.csv
 ##############################################
 con<-pipe("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' 2008.csv","r")
 #rstats 
@@ -108,7 +108,8 @@ rstats<-function(B,con,year){
     ArrDelay<-ArrDelay[dropNA]
     Origin<-Origin[dropNA]
     #1.1 Rcounts
-    update<-tapply(ArrDelay,Origin,length)[names(Rcounts)]
+    update<-as.numeric(table(temp)[names(Rcounts)])
+    #update<-tapply(ArrDelay,Origin,length)[names(Rcounts)] #table() is faster than tapply(length)
     update[is.na(update)]<-0
     Rcounts<-Rcounts+as.numeric(update)
     #1.2 Rsum
@@ -123,14 +124,14 @@ rstats<-function(B,con,year){
   cbind(Rcounts,Rsum,Rsumvar)
 }
 
-
+# i. rstats()
 system.time(RS.ALL<-rstats(400L,con))
 #user  system elapsed 
 #34.124   0.099  62.476 
 RS[,2]/RS[,1]
 sqrt(RS[,3]/RS[,1])
 
-# awk validation
+# ii. awk validation
 system.time(cmean<-system("egrep '([0-9]|NA),LAX,[A-Z]' 2008.csv | cut -f 15 -d , | awk 'BEGIN {s=0; c=0}; {s=s+$1;c=c+1}; END {print c,s/c}'",intern=TRUE))
 #> counts mean (LAX 2008.csv)
 #[1] "181706 5.28919"
@@ -139,41 +140,46 @@ system.time(cmean<-system("egrep '([0-9]|NA),LAX,[A-Z]' 2008.csv | cut -f 15 -d 
 #[1] "44990 3.32407"
 #user  system elapsed for each airport
 #41.994   0.185  41.596 
-#43.088   0.216  43.191 
-system.time(cmean2<-system("egrep '([0-9]|NA),LAX,[A-Z]' [12]*.csv | cut -f 15 -d , | awk 'BEGIN {s=0; c=0}; {s=s+$1;c=c+1}; END {print c,s/c}'",intern=TRUE))
-# counts mean (LAX [12]*.csv)
-#[1] "3947365 5.90915"
-
 
 ##############################################
 # (II) Mean and Std.Dev for All Years
 ##############################################
 Sys.setlocale(locale="C")
-#ALL YEAR
+source('rstats.R')
+
+# i. Each Year (array)
 year = gsub(".*([0-9]{4}).csv.*", "\\1", files[grep(".*([0-9]{4}.csv).*", files)])
 cmds<-sprintf("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' %s.csv",year)
-#temp<-lapply(cmds,system,intern=TRUE)
-
-RS.ALL.ARRAY<-lapply(cmds,function(cmd){con<-pipe(cmd,"r")
+system.time(RS.ALL<-lapply(cmds,function(cmd){con<-pipe(cmd,"r")
                                         tmp<-rstats(400L,con)
                                         close(con)
-                                        tmp},
-                     simplify=True)
-names(RS.ALL.ARRAY)<-year
-
-con<-pipe("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' [12]*.csv",open="r")
-system.time(RS.ALL<-rstats(400L,con))
+                                        tmp}))
+names(RS.ALL)<-year
 #user   system  elapsed 
-#763.809    2.189 1332.127 
+#1824.276   10.011 1285.353 
+RS.ALL.ARRAY<-array(unlist(RS.ALL), dim = c(nrow(RS.ALL[[1]]), ncol(RS.ALL[[1]]), length(RS.ALL))) #(4 x 3 x 22)
+rownames(RS.ALL.ARRAY)<-rownames(RS.ALL[[1]])
+colnames(RS.ALL.ARRAY)<-colnames(RS.ALL[[1]])
+dimnames(RS.ALL.ARRAY)[[3]]<-year
 
-#1987
-con<-pipe("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' 1987.csv",open="r")
-system.time(RS.1987<-rstats(400L,con))
-#table
-#user  system elapsed 
-#10.749   0.025  19.469 
-#tapply
-#user  system elapsed 
-#7.901   0.024  14.950 
-RS[,2]/RS[,1]
-sqrt(RS[,3]/RS[,1])
+RS<-apply(RS.ALL.ARRAY,c(1,2),sum)
+
+RS[,1]#counts
+RS[,2]/RS[,1]  #mean
+sqrt(RS[,3]/RS[,1]) #std.dev
+
+# ii. All Years (array-validation)
+con<-pipe("egrep '([0-9]|NA),(LAX|OAK|SFO|SMF),[A-Z]' [12]*.csv",open="r")
+system.time(RS.ALL.Validation<-rstats(400L,con))
+#user   system  elapsed 
+#671.574    2.686 1351.976 
+
+RS.ALL.Validation[,1]#counts
+RS.ALL.Validation[,2]/RS.ALL.Validation[,1]  #mean
+sqrt(RS.ALL.Validation[,3]/RS.ALL.Validation[,1]) #std.dev
+
+# iii. All Years (awk-validation)
+system.time(cmean2<-system("egrep '([0-9]|NA),LAX,[A-Z]' [12]*.csv | cut -f 15 -d , | awk 'BEGIN {s=0; c=0}; {s=s+$1;c=c+1}; END {print c,s/c}'",intern=TRUE))
+# counts mean (LAX [12]*.csv)
+#[1] "3947365 5.90915"
+#The awk validation is a quick validation which has a larger n without dropping NA ArrDelay observations
