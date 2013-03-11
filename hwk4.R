@@ -55,6 +55,27 @@ system.time(RSHcount<-rcount(400L,con))
 #user  system elapsed 
 #19.476   0.061  57.478 
 
+#----------------------------
+#(IV) SQLite
+#----------------------------
+library("RSQLite")
+dr=dbDriver("SQLite")
+con=dbConnect(dr,dbname = "airlineTable.db")
+system.time(rr<-dbSendQuery(con,"SELECT count(*) FROM delays WHERE Origin IN ('LAX', 'OAK', 'SFO', 'SMF') GROUP BY Origin;"))
+system.time(fetch(rr,100))
+#counts
+fetch(rr,100)  
+# user  system elapsed 
+# 0.557   0.016   0.576
+library("RSQLite.extfuns")
+con=dbConnect(dr,dbname = "airlineTable.db")
+init_extensions(con)
+#average
+aa<-dbSendQuery(con,"SELECT avg(ArrDelay) FROM delays WHERE Origin IN ('LAX', 'OAK', 'SFO', 'SMF') GROUP BY Origin;")
+fetch(aa,4)
+#std.dev
+std<-dbSendQuery(con,"SELECT stdev(ArrDelay) FROM delays WHERE Origin IN ('LAX', 'OAK', 'SFO', 'SMF') GROUP BY Origin;")
+fetch(std,4)
 ##############################################
 # PART II. Means and Std.Dev
 ##############################################

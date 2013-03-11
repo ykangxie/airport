@@ -33,3 +33,4 @@ rstats<-function(B,con){
   }
   cbind(Rcounts,Rsum,Rsumvar)
 }
+
