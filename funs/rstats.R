@@ -1,5 +1,5 @@
 #rstats 
-rstats<-function(B,con,year){
+rstats<-function(B,con){
   B=as.integer(B)
   #set up counters
   Rcounts<-structure(c(data=rep(0,4)),names=c("LAX","OAK","SFO","SMF"))
@@ -18,7 +18,7 @@ rstats<-function(B,con,year){
     ArrDelay<-ArrDelay[dropNA]
     Origin<-Origin[dropNA]
     #1.1 Rcounts
-    update<-as.numeric(table(temp)[names(Rcounts)])
+    update<-as.numeric(table(Origin)[names(Rcounts)])
     #update<-tapply(ArrDelay,Origin,length)[names(Rcounts)] #table() is faster than tapply(length)
     update[is.na(update)]<-0
     Rcounts<-Rcounts+as.numeric(update)
