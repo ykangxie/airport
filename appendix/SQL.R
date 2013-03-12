@@ -16,3 +16,4 @@ fetch(std,4)
 RSQLite Extension 
 install.packages("RSQLite.extfuns")
 library("RSQLite.extfuns")
+
